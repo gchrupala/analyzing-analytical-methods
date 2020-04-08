@@ -1,4 +1,4 @@
-# phoneme-repr
+# Analyzing analytical methods
 
 This repository contains the instructions and code to help you reproduce the results in the following paper:
 
