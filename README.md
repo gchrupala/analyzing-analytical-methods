@@ -1,14 +1,28 @@
-# Representations of phonemes
+# Analyzing analytical methods
 
-We consider two analytical approaches:
+This repository contains the instructions and code to help you reproduce the results in the following paper:
 
-- **diagnostic classification**, where neural activations are used as input features to a classifier which predicts which phonemes they 
-  correspond to;
-- **representational similarity analysis**, where similarities are measured in phoneme or phoneme-string space and compared to 
-  similarities in neural activation space.
-  
-We also consider two ways of viewing activation patterns in hidden layers as representations:
+Grzegorz Chrupała, Bertrand Higy and Afra Alishahi (2020). Analyzing analytical methods: The case of phonology in neural models of spoken language. In Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics.
 
-- **local activations**: we use single frames/time-steps, or short segments as neural representations
-- **pooled activations**: pool activations over the whole utterance to use as a global neural representation.
+## RNN-VGS experiments
+- Download and unpack the  model and data from [TODO]. 
+- Create the input data for analyses:
+```
+python -c 'import prepare as P; P.prepare_rnn_vgs()'
+```
+- [TODO]
 
+
+## ASR-VGS experiments
+[TODO]
+
+## Transformer-ASR experiments
+
+The transformer-ASR model is a transformer model trained with
+[ESPnet](https://github.com/espnet/espnet) on
+[Librispeech](http://www.openslr.org/12/). The forked version of the code we
+used to extract the activations is available from https://github.com/bhigy/espnet/tree/phoneme-repr. The
+[README](https://github.com/bhigy/espnet/blob/phoneme-repr/README.md) at the
+root of the repository provides instructions for installation, while details about
+activations extraction can be found under
+[egs/librispeech/asr1/README.md](https://github.com/bhigy/espnet/blob/phoneme-repr/egs/librispeech/asr1/README.md).
