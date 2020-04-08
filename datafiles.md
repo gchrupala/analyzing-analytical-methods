@@ -1,8 +1,6 @@
 # Data format
 
-For analyzing the models we are using the data files described below. 
-For each new model we'll need similar files, with the structure adapted to the architecture of the model if needed. 
-The data is split into several files due to its large size.
+For analyzing the VGS model we are using the data files described below. For each new model we'll need similar files, with the structure adapted to the architecture of the model if needed. The data is split into several files due to it's large size.
 
 ## Global 
 ```
