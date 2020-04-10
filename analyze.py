@@ -13,6 +13,7 @@ import platalea.encoders as encoders
 import platalea.attention
 import os.path
 import logging
+logging.getLogger().setLevel('INFO')
 import json
 
 from plotnine import *
@@ -24,8 +25,6 @@ import pickle
 
 
 def analyze_rnn_vgs():
-    logging.getLogger().setLevel('INFO')
-
     logging.info("Attention pooling; global diagnostic")
     
     config = dict(directory = 'data/out/rnn-vgs/',
@@ -44,7 +43,7 @@ def analyze_rnn_vgs():
 
     logging.info("Attention pooling; global RSA")
     config = dict(directory = 'data/out/rnn-vgs/',
-                  output = 'data/out/rnn-vgs/attn/global_rsa.json',
+                  output = 'data/out/rnn-vgs/attn/',
               attention = 'linear',
               standardize = True,
               attention_hidden_size = None,
@@ -84,7 +83,7 @@ def analyze_rnn_vgs():
     
     logging.info("Local diagnostic")
     config = dict(directory = 'data/out/rnn-vgs/',
-                  output= ' data/out/rnn-vgs/local/',
+                  output= 'data/out/rnn-vgs/local/',
               hidden=None,
               epochs=40,
               layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ]
@@ -110,7 +109,8 @@ def analyze_rnn_vgs():
 
 def local_diagnostic(config):
     directory = config['directory']
-    logging.getLogger().setLevel('INFO')
+    out = config["output"] + "local_diagnostic.json"
+    del config['output']
     output = []
     data_mfcc = pickle.load(open('{}/local_input.pkl'.format(directory), 'rb'))
     #for mode in ['trained', 'random']:
@@ -129,38 +129,41 @@ def local_diagnostic(config):
                 result['model'] = mode
                 result['layer'] = layer
                 output.append(result)
-    json.dump(output, open(config["output"] + "local_diagnostic.json", "w"), indent=True)
+    logging.info("Writing {}".format(out))            
+    json.dump(output, open(out, "w"), indent=True)
 
 def local_rsa(config):
-    logging.getLogger().setLevel('INFO')
+    out = config['output'] + "local_rsa.json"
+    del config['output']
     if config['matrix']:
         raise NotImplementedError
         #result = framewise_RSA_matrix(directory, layers=config['layers'], size=config['size'])
     else:
         del config['matrix']
         result = framewise_RSA(**config)
-    json.dump(result, open(config['output'] + "local_rsa.json", 'w'), indent=2)
+    logging.info("Writing {}".format(out))
+    json.dump(result, open(out, 'w'), indent=2)
     
 ### Global
     
 def global_rsa(config):
-    out = config['output']
+    out = config['output'] + 'global_rsa.json'
     del config['output']
-    logging.getLogger().setLevel('INFO')
     result = weighted_average_RSA(**config)
-    json.dump(result, open(out + 'global_rsa.json', 'w'), indent=2)
+    logging.info("Writing {}".format(out))
+    json.dump(result, open(out, 'w'), indent=2)
 
 def global_rsa_partial(config):
-    logging.getLogger().setLevel('INFO')
     result = weighted_average_RSA_partial(**config)
     json.dump(result, open('global_rsa_partial.json', 'w'), indent=2)
 
 def global_diagnostic(config):
-    out = config['output']
+    out = config['output'] + 'global_diagnostic.json'
     del config['output']
     logging.getLogger().setLevel('INFO')
     result = weighted_average_diagnostic(**config)
-    json.dump(result, open(out, 'w') + 'global_diagnostic.json', indent=2)
+    logging.info("Writing {}".format(out))
+    json.dump(result, open(out, 'w') , indent=2)
 
 def plots():
     local_diagnostic_plot()
@@ -718,3 +721,64 @@ def train_classifier(model, X, y, X_val, y_val, epochs=1, patience=50, factor=0.
     del model, optim
     return max(scores, key=lambda a: a['acc'])
 
+# PLOTTING
+import pandas as pd
+from plotnine import *
+from plotnine.options import figure_size
+
+def plot_rnn_vgs():
+    plot(path="data/out/rnn-vgs/")
+    
+def plot(path='.'):
+    ld = pd.read_json("{}/local/local_diagnostic.json".format(path), orient="records");         ld['scope'] = 'local';   ld['method'] = 'diagnostic'
+    lr = pd.read_json("{}/local/local_rsa.json".format(path), orient="records");                lr['scope'] = 'local';   lr['method'] = 'rsa'       
+    gd = pd.read_json("{}/mean/global_diagnostic.json".format(path), orient="records");   gd['scope'] = 'mean pool';  gd['method'] = 'diagnostic'
+    gr = pd.read_json("{}/mean/global_rsa.json".format(path), orient="records");          gr['scope'] = 'mean pool';  gr['method'] = 'rsa'       
+    ad = pd.read_json("{}/attn/global_diagnostic.json".format(path), orient="records");   ad['scope'] = 'attn pool';  ad['method'] = 'diagnostic'
+    ar = pd.read_json("{}/attn/global_rsa.json".format(path), orient="records");          ar['scope'] = 'attn pool';  ar['method'] = 'rsa'       
+    data = pd.concat([ld, lr, gd, gr, ad, ar], sort=False)
+
+    data['rer'] = rer(data['acc'], data['baseline'])
+    data['score'] = data['rer'].fillna(0.0) + data['cor'].fillna(0.0)
+
+    order = list(data['layer'].unique()) 
+    data['layer id'] = [ order.index(x) for x in data['layer'] ]
+    # Reorder scope
+    data['scope'] = pd.Categorical(data['scope'], categories=['local', 'mean pool', 'attn pool'])
+    # Reorder model
+    data['model'] = pd.Categorical(data['model'], categories=['trained', 'random'])
+    
+    g = ggplot(data, aes(x='layer id', y='score', color='model', linetype='model', shape='model')) + geom_point() + geom_line() + \
+                            facet_wrap('~ method + scope') + \
+                            theme(figure_size=(figure_size[0]*1.5, figure_size[1]*1.5))
+    ggsave(g, '{}/fig/plot.png'.format(path))
+
+def rer(hi, lo): 
+    return ((1-lo) - (1-hi))/(1-lo)
+
+def r2_partial(path='.'):
+    data = pd.read_json("{}/global_rsa_partial.json".format(path), orient="records")
+    order = list(data['layer'].unique()) 
+    data['layer id'] = [ order.index(x) for x in data['layer'] ]
+    data['partial R²'] = (data['baseline'] - data['error']) / data['baseline']
+    data['cor'] = abs(data['partial R²'])**0.5
+    # Reorder model
+    data['model'] = pd.Categorical(data['model'], categories=['trained', 'random'])
+    g = ggplot(data, aes(x='layer id', y='cor', color='model', linetype='model', shape='model')) + geom_point() + geom_line() +\
+                            ylab("√R² (partial)")
+    ggsave(g, 'r2_partial.png')
+    
+def partialing(path='.'):
+    data = pd.read_json("{}/global_rsa_partial.json".format(path), orient="records")
+    order = list(data['layer'].unique()) 
+    data['layer id'] = [ order.index(x) for x in data['layer'] ]
+    data['partial R²'] = (data['baseline'] - data['error']) / data['baseline']
+    # Reorder model
+    data['model'] = pd.Categorical(data['model'], categories=['trained', 'random'])
+    #
+    pass
+                         
+    ggsave(g, 'partialing.png')
+    
+#plot()
+#r2_partial()
