@@ -727,9 +727,9 @@ from plotnine import *
 from plotnine.options import figure_size
 
 def plot_rnn_vgs():
-    plot(path="data/out/rnn-vgs/")
+    plot(path="data/out/rnn-vgs", output="fig/rnn-vgs")
     
-def plot(path='.'):
+def plot(path, output):
     ld = pd.read_json("{}/local/local_diagnostic.json".format(path), orient="records");         ld['scope'] = 'local';   ld['method'] = 'diagnostic'
     lr = pd.read_json("{}/local/local_rsa.json".format(path), orient="records");                lr['scope'] = 'local';   lr['method'] = 'rsa'       
     gd = pd.read_json("{}/mean/global_diagnostic.json".format(path), orient="records");   gd['scope'] = 'mean pool';  gd['method'] = 'diagnostic'
@@ -751,7 +751,7 @@ def plot(path='.'):
     g = ggplot(data, aes(x='layer id', y='score', color='model', linetype='model', shape='model')) + geom_point() + geom_line() + \
                             facet_wrap('~ method + scope') + \
                             theme(figure_size=(figure_size[0]*1.5, figure_size[1]*1.5))
-    ggsave(g, '{}/fig/plot.png'.format(path))
+    ggsave(g, '{}/plot.png'.format(output))
 
 def rer(hi, lo): 
     return ((1-lo) - (1-hi))/(1-lo)
