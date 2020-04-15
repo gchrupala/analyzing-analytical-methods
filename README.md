@@ -5,12 +5,25 @@ This repository contains the instructions and code to help you reproduce the res
 Grzegorz Chrupała, Bertrand Higy and Afra Alishahi (2020). Analyzing analytical methods: The case of phonology in neural models of spoken language. In Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics.
 
 ## RNN-VGS experiments
+
 - Download and unpack the  model and data from https://surfdrive.surf.nl/files/index.php/s/XIEKFGIB8TwoKLd.
+- Install requirements:
+```
+pip install -r requirements.txt
+```
 - Create the input data for analyses:
 ```
-python -c 'import prepare as P; P.prepare_rnn_vgs()'
+python -c 'import prepare; prepare.prepare_rnn_vgs()'
 ```
-- [TODO]
+- Run analyses:
+```
+python -c 'import analyze; analyze.analyze_rnn_vgs()'
+```
+- Plot results:
+```
+python -c 'import analyze; analyze.plot_rnn_vgs()'
+``` 
+  
 
 
 ## ASR-VGS experiments
