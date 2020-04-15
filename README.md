@@ -19,12 +19,19 @@ python -c 'import prepare; prepare.prepare_rnn_vgs()'
 ```
 python -c 'import analyze; analyze.analyze_rnn_vgs()'
 ```
-- Plot results:
+- Plot main results (Figure 2)
 ```
 python -c 'import analyze; analyze.plot_rnn_vgs()'
-``` 
-  
+```
+- Plot Figure 4:
+```
+python -c 'import analyze; analyze.plot_r2_partial()'
 
+```
+- Plot Figure 5
+```
+python -c 'import analyze; analyze.plot_pooled_feature_std()
+```
 
 ## ASR-VGS experiments
 [TODO]
