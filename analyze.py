@@ -38,7 +38,7 @@ def analyze_rnn_vgs():
                   layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
                   device='cuda'
                   )
-    global_diagnostic(config)
+#    global_diagnostic(config)
 
 
     logging.info("Attention pooling; global RSA")
@@ -52,8 +52,8 @@ def analyze_rnn_vgs():
               layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
               device = 'cuda'
               )
-    global_rsa(config)
-
+#    global_rsa(config)
+ 
     
     logging.info("Mean pooling; global diagnostic")
     config = dict(directory = 'data/out/rnn-vgs/',
@@ -66,7 +66,7 @@ def analyze_rnn_vgs():
               layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
               device='cuda'
               )
-    global_diagnostic(config)
+#    global_diagnostic(config)
 
 
     logging.info("Mean pooling; global RSA")
@@ -78,8 +78,9 @@ def analyze_rnn_vgs():
               layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
               device = 'cpu'
               )
-    global_rsa(config)
-
+#    global_rsa(config)
+    del config['attention']
+    global_rsa_partial(config)
     
     logging.info("Local diagnostic")
     config = dict(directory = 'data/out/rnn-vgs/',
@@ -89,7 +90,7 @@ def analyze_rnn_vgs():
               layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ]
               )
 
-    local_diagnostic(config)
+#    local_diagnostic(config)
 
 
     logging.info("Local RSA")
@@ -100,7 +101,7 @@ def analyze_rnn_vgs():
               matrix=False
               )
 
-    local_rsa(config)
+#    local_rsa(config)
 
 
     
@@ -154,8 +155,10 @@ def global_rsa(config):
     json.dump(result, open(out, 'w'), indent=2)
 
 def global_rsa_partial(config):
+    out = config['output'] + 'global_rsa_partial.json'
+    del config['output']
     result = weighted_average_RSA_partial(**config)
-    json.dump(result, open('global_rsa_partial.json', 'w'), indent=2)
+    json.dump(result, open(out, 'w'), indent=2)
 
 def global_diagnostic(config):
     out = config['output'] + 'global_diagnostic.json'
@@ -202,26 +205,32 @@ def global_rsa_plot(directory='.'):
     g = ggplot(data, aes(x='layer_id', y='cor', color='model')) + geom_point(size=2) + geom_line(size=2) + ylim(-0.1, 1) + ggtitle("Global RSA")
     ggsave(g, "global_rsa.png")
 
-def pooled_feature_variance(path, layers=['rnn0', 'rnn1', 'rnn2', 'rnn3']):
+def plot_pooled_feature_std():
+    path = 'data/out/rnn-vgs/'
+    layers=['conv', 'rnn0', 'rnn1', 'rnn2', 'rnn3']
     data = pd.DataFrame()
-    for model in ['random']: #['trained', 'random']:
+    for model in ['trained', 'random']:
+        layer = 'mfcc'
+        act = pickle.load(open("{}/global_input.pkl".format(path), "rb"))['audio']
+        act_avg = np.stack([x.mean(axis=0) for x in act])
+        rows=pd.DataFrame(data=dict(std=act_avg.std(axis=1), model=np.repeat(model, len(act_avg)), layer=np.repeat(layer, len(act_avg))))
+        data = data.append(rows)
         for layer in layers:
             act = pickle.load(open("{}/global_{}_{}.pkl".format(path, model, layer), "rb"))[layer]
-            # Normalization seems to destroy the pattern
-            # act_torch = [ torch.tensor(a).float() for a in act ]
-            # act_norm, _ = normalize(act_torch, act_torch) # Feature-wise scaling
-            # act_norm = [a.numpy() for a in act_norm ]
-            # act_avg = np.stack([x.mean(axis=0) for x in act_norm ])
             act_avg = np.stack([x.mean(axis=0) for x in act])
             rows=pd.DataFrame(data=dict(std=act_avg.std(axis=1), model=np.repeat(model, len(act_avg)), layer=np.repeat(layer, len(act_avg))))
             data = data.append(rows)
     order = list(data['layer'].unique())  
-    data['layer_id'] = [ order.index(x) for x in data['layer'] ] 
+    data['layer_id'] = [ order.index(x) for x in data['layer'] ]
+    # Only plot RNN layers
+    data = data[data['layer'].str.startswith('rnn')]
     z = data.groupby(['layer_id', 'model']).mean().reset_index()
     g = ggplot(data, aes(x='layer_id', y='std', color='model')) + \
-                                                geom_point(alpha=0.1, position='jitter', fill='white') +  \
-                                                geom_line(data=z, size=3, alpha=1.0)
-    ggsave(g, 'pooled_feature_variance.pdf')
+                            geom_point(alpha=0.1, size=2, position='jitter', fill='white') +  \
+                            geom_line(data=z, size=2, alpha=1.0) + \
+                            ylab("Standard deviation") +\
+                            xlab("layer id")
+    ggsave(g, 'fig/rnn-vgs/pooled_feature_std.png')
     
 ## Tables
 def learning_effect():
@@ -756,7 +765,8 @@ def plot(path, output):
 def rer(hi, lo): 
     return ((1-lo) - (1-hi))/(1-lo)
 
-def r2_partial(path='.'):
+def plot_r2_partial():
+    path = 'data/out/rnn-vgs/mean/'
     data = pd.read_json("{}/global_rsa_partial.json".format(path), orient="records")
     order = list(data['layer'].unique()) 
     data['layer id'] = [ order.index(x) for x in data['layer'] ]
@@ -766,7 +776,7 @@ def r2_partial(path='.'):
     data['model'] = pd.Categorical(data['model'], categories=['trained', 'random'])
     g = ggplot(data, aes(x='layer id', y='cor', color='model', linetype='model', shape='model')) + geom_point() + geom_line() +\
                             ylab("√R² (partial)")
-    ggsave(g, 'r2_partial.png')
+    ggsave(g, 'fig/rnn-vgs/r2_partial.png')
     
 def partialing(path='.'):
     data = pd.read_json("{}/global_rsa_partial.json".format(path), orient="records")
