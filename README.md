@@ -34,7 +34,7 @@ python -c 'import analyze; analyze.plot_r2_partial()'
 python -c 'import analyze; analyze.plot_pooled_feature_std()
 ```
 
-## ASR-VGS experiments
+## RNN-ASR experiments
 [TODO]
 
 ## Transformer-ASR experiments

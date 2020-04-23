@@ -6,18 +6,15 @@ random.seed(SEED)
 import numpy as np
 np.random.seed(SEED)
 
-import sys
 import torch.nn as nn
-import platalea.basic as basic
-import platalea.encoders as encoders
 import platalea.attention
-import os.path
 import logging
 logging.getLogger().setLevel('INFO')
 import json
+from pathlib import Path
 
 from plotnine import *
-import pandas as pd 
+import pandas as pd
 import ursa.similarity as S
 import ursa.util as U
 import pickle
@@ -26,9 +23,179 @@ import pickle
 
 def analyze_rnn_vgs():
     logging.info("Attention pooling; global diagnostic")
-    
-    config = dict(directory = 'data/out/rnn-vgs/',
-                  output = 'data/out/rnn-vgs/attn/',
+
+    output_dir = 'data/out/rnn-vgs/attn/'
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    config = dict(directory='data/out/rnn-vgs/',
+                  output=output_dir,
+                  attention='linear',
+                  standardize=True,
+                  hidden_size=None,
+                  attention_hidden_size=None,
+                  epochs=500,
+                  test_size=1/2,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  device='cuda'
+                  )
+    global_diagnostic(config)
+
+
+    output_dir = 'data/out/rnn-vgs/attn/'
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    logging.info("Attention pooling; global RSA")
+    config = dict(directory='data/out/rnn-vgs/',
+                  output=output_dir,
+                  attention='linear',
+                  standardize=True,
+                  attention_hidden_size=None,
+                  epochs=60,
+                  test_size=1/2,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  device='cuda'
+                  )
+    global_rsa(config)
+
+
+    output_dir = 'data/out/rnn-vgs/mean/'
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    logging.info("Mean pooling; global diagnostic")
+    config = dict(directory='data/out/rnn-vgs/',
+                  output=output_dir,
+                  attention='mean',
+                  hidden_size=None,
+                  attention_hidden_size=None,
+                  epochs=500,
+                  test_size=1/2,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  device='cuda'
+                  )
+    global_diagnostic(config)
+
+
+    output_dir = 'data/out/rnn-vgs/mean/'
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    logging.info("Mean pooling; global RSA")
+    config = dict(directory='data/out/rnn-vgs/',
+                  output=output_dir,
+                  attention='mean',
+                  epochs=60,
+                  test_size=1/2,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  device='cpu'
+                  )
+    global_rsa(config)
+    del config['attention']
+    global_rsa_partial(config)
+
+
+    output_dir = 'data/out/rnn-vgs/local/'
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    logging.info("Local diagnostic")
+    config = dict(directory='data/out/rnn-vgs/',
+                  output=output_dir,
+                  hidden=None,
+                  epochs=40,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ]
+                  )
+    local_diagnostic(config)
+
+
+    output_dir = 'data/out/rnn-vgs/local/'
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    logging.info("Local RSA")
+    config = dict(directory='data/out/rnn-vgs/',
+                  output=output_dir,
+                  size=793964 // 2,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  matrix=False
+                  )
+    local_rsa(config)
+
+
+def analyze_rnn_asr():
+    logging.info("Attention pooling; global diagnostic")
+
+    config = dict(directory='data/out/rnn-asr/',
+                  output='data/out/rnn-asr/attn/',
+                  attention='linear',
+                  standardize=True,
+                  hidden_size=None,
+                  attention_hidden_size=None,
+                  epochs=500,
+                  test_size=1/2,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  device='cuda'
+                  )
+    global_diagnostic(config)
+
+
+    logging.info("Attention pooling; global RSA")
+    config = dict(directory='data/out/rnn-asr/',
+                  output='data/out/rnn-asr/attn/',
+                  attention='linear',
+                  standardize=True,
+                  attention_hidden_size=None,
+                  epochs=60,
+                  test_size=1/2,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  device='cuda'
+                  )
+    global_rsa(config)
+
+
+    logging.info("Mean pooling; global diagnostic")
+    config = dict(directory='data/out/rnn-asr/',
+                  output='data/out/rnn-asr/mean/',
+                  attention='mean',
+                  hidden_size=None,
+                  attention_hidden_size=None,
+                  epochs=500,
+                  test_size=1/2,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  device='cuda'
+                  )
+    global_diagnostic(config)
+
+
+    logging.info("Mean pooling; global RSA")
+    config = dict(directory='data/out/rnn-asr/',
+                  output='data/out/rnn-asr/mean/',
+                  attention='mean',
+                  epochs=60,
+                  test_size=1/2,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  device='cpu'
+                  )
+    global_rsa(config)
+    del config['attention']
+    global_rsa_partial(config)
+
+    logging.info("Local diagnostic")
+    config = dict(directory='data/out/rnn-asr/',
+                  output='data/out/rnn-asr/local/',
+                  hidden=None,
+                  epochs=40,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ]
+                  )
+    local_diagnostic(config)
+
+
+    logging.info("Local RSA")
+    config = dict(directory='data/out/rnn-asr/',
+                  output='data/out/rnn-asr/local/',
+                  size=793964 // 2,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  matrix=False
+                  )
+    local_rsa(config)
+
+
+def analyze_transformer_asr():
+    # TODO adapt layers
+    logging.info("Attention pooling; global diagnostic")
+
+    config = dict(directory = 'data/out/transformer-asr/',
+                  output = 'data/out/transformer-asr/attn/',
                   attention = 'linear',
                   standardize = True,
                   hidden_size = None,
@@ -38,12 +205,12 @@ def analyze_rnn_vgs():
                   layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
                   device='cuda'
                   )
-#    global_diagnostic(config)
+    global_diagnostic(config)
 
 
     logging.info("Attention pooling; global RSA")
-    config = dict(directory = 'data/out/rnn-vgs/',
-                  output = 'data/out/rnn-vgs/attn/',
+    config = dict(directory = 'data/out/transformer-asr/',
+                  output = 'data/out/transformer-asr/attn/',
               attention = 'linear',
               standardize = True,
               attention_hidden_size = None,
@@ -52,12 +219,12 @@ def analyze_rnn_vgs():
               layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
               device = 'cuda'
               )
-#    global_rsa(config)
- 
-    
+    global_rsa(config)
+
+
     logging.info("Mean pooling; global diagnostic")
-    config = dict(directory = 'data/out/rnn-vgs/',
-                  output = 'data/out/rnn-vgs/mean/',
+    config = dict(directory = 'data/out/transformer-asr/',
+                  output = 'data/out/transformer-asr/mean/',
               attention = 'mean',
               hidden_size = None,
               attention_hidden_size = None,
@@ -66,46 +233,45 @@ def analyze_rnn_vgs():
               layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
               device='cuda'
               )
-#    global_diagnostic(config)
+    global_diagnostic(config)
 
 
     logging.info("Mean pooling; global RSA")
-    config = dict(directory = 'data/out/rnn-vgs/',
-                  output = 'data/out/rnn-vgs/mean/',
+    config = dict(directory = 'data/out/transformer-asr/',
+                  output = 'data/out/transformer-asr/mean/',
               attention = 'mean',
               epochs = 60,
               test_size = 1/2,
               layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
               device = 'cpu'
               )
-#    global_rsa(config)
+    global_rsa(config)
     del config['attention']
     global_rsa_partial(config)
-    
+
     logging.info("Local diagnostic")
-    config = dict(directory = 'data/out/rnn-vgs/',
-                  output= 'data/out/rnn-vgs/local/',
+    config = dict(directory = 'data/out/transformer-asr/',
+                  output= 'data/out/transformer-asr/local/',
               hidden=None,
               epochs=40,
               layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ]
               )
 
-#    local_diagnostic(config)
+    local_diagnostic(config)
 
 
     logging.info("Local RSA")
-    config = dict(directory = 'data/out/rnn-vgs/',
-                  output='data/out/rnn-vgs/local/',
+    config = dict(directory = 'data/out/transformer-asr/',
+                  output='data/out/transformer-asr/local/',
               size = 793964 // 2,
               layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
               matrix=False
               )
 
-#    local_rsa(config)
+    local_rsa(config)
 
 
-    
-## Models            
+## Models
 ### Local
 
 def local_diagnostic(config):
@@ -130,7 +296,7 @@ def local_diagnostic(config):
                 result['model'] = mode
                 result['layer'] = layer
                 output.append(result)
-    logging.info("Writing {}".format(out))            
+    logging.info("Writing {}".format(out))
     json.dump(output, open(out, "w"), indent=True)
 
 def local_rsa(config):
@@ -144,9 +310,9 @@ def local_rsa(config):
         result = framewise_RSA(**config)
     logging.info("Writing {}".format(out))
     json.dump(result, open(out, 'w'), indent=2)
-    
+
 ### Global
-    
+
 def global_rsa(config):
     out = config['output'] + 'global_rsa.json'
     del config['output']
@@ -194,14 +360,14 @@ def global_diagnostic_plot(directory='.'):
 def local_rsa_plot(directory='.'):
     data = pd.read_json("{}/local_rsa.json".format(directory), orient='records')
     order = list(data['layer'].unique())
-    data['layer_id'] = [ order.index(x) for x in data['layer'] ] 
+    data['layer_id'] = [ order.index(x) for x in data['layer'] ]
     g = ggplot(data, aes(x='layer_id', y='cor', color='model')) + geom_point(size=2) + geom_line(size=2) + ylim(0, 1) + ggtitle("Local RSA")
     ggsave(g, 'local_rsa.png')
 
 def global_rsa_plot(directory='.'):
     data = pd.read_json("{}/global_rsa.json".format(directory), orient='records')
     order = list(data['layer'].unique())
-    data['layer_id'] = [ order.index(x) for x in data['layer'] ] 
+    data['layer_id'] = [ order.index(x) for x in data['layer'] ]
     g = ggplot(data, aes(x='layer_id', y='cor', color='model')) + geom_point(size=2) + geom_line(size=2) + ylim(-0.1, 1) + ggtitle("Global RSA")
     ggsave(g, "global_rsa.png")
 
@@ -220,7 +386,7 @@ def plot_pooled_feature_std():
             act_avg = np.stack([x.mean(axis=0) for x in act])
             rows=pd.DataFrame(data=dict(std=act_avg.std(axis=1), model=np.repeat(model, len(act_avg)), layer=np.repeat(layer, len(act_avg))))
             data = data.append(rows)
-    order = list(data['layer'].unique())  
+    order = list(data['layer'].unique())
     data['layer_id'] = [ order.index(x) for x in data['layer'] ]
     # Only plot RNN layers
     data = data[data['layer'].str.startswith('rnn')]
@@ -230,15 +396,16 @@ def plot_pooled_feature_std():
                             geom_line(data=z, size=2, alpha=1.0) + \
                             ylab("Standard deviation") +\
                             xlab("layer id")
+    Path('fig/rnn-vgs').mkdir(parents=True, exist_ok=True)
     ggsave(g, 'fig/rnn-vgs/pooled_feature_std.png')
-    
+
 ## Tables
 def learning_effect():
-    def le(trained, random): 
-        return 1 - (random/trained) 
+    def le(trained, random):
+        return 1 - (random/trained)
     ld = pd.read_json("local_diagnostic.json", orient="records");    ld['scope'] = 'local';   ld['method'] = 'diagnostic'
-    lr = pd.read_json("local_rsa.json", orient="records");           lr['scope'] = 'local';   lr['method'] = 'rsa'     
-    gd = pd.read_json("global_diagnostic.json", orient="records");   gd['scope'] = 'global';  gd['method'] = 'diagnostic' 
+    lr = pd.read_json("local_rsa.json", orient="records");           lr['scope'] = 'local';   lr['method'] = 'rsa'
+    gd = pd.read_json("global_diagnostic.json", orient="records");   gd['scope'] = 'global';  gd['method'] = 'diagnostic'
     gr = pd.read_json("global_rsa.json", orient="records");          gr['scope'] = 'global';  gr['method'] = 'rsa'
     data = pd.concat([ld, lr, gd, gr], sort=False)
     data['rer'] = rer(data['acc'], data['baseline'])
@@ -247,10 +414,10 @@ def learning_effect():
     random  = data.loc[data['model']=='random']
     trained['learning_effect'] = le(trained['score'].values, random['score'].values)
     data = trained[['epoch', 'layer', 'method', 'scope', 'score', 'learning_effect']].reset_index()
-    order = list(data['layer'].unique()) 
-    data['layer_id'] = [ order.index(x) for x in data['layer'] ] 
+    order = list(data['layer'].unique())
+    data['layer_id'] = [ order.index(x) for x in data['layer'] ]
     json.dump(data.to_dict(orient='records'), open('learning_effect.json', 'w'))
-    g = ggplot(data, aes(x='layer_id', y='learning_effect', color='method', linetype='scope')) + geom_point(size=2) + geom_line(size=1) 
+    g = ggplot(data, aes(x='layer_id', y='learning_effect', color='method', linetype='scope')) + geom_point(size=2) + geom_line(size=1)
     ggsave(g, "learning_effect.png")
 
 def majority_binary(y):
@@ -266,14 +433,14 @@ def local_classifier(features, labels, test_size=1/2, epochs=1, device='cpu', hi
     from sklearn.model_selection import train_test_split
 
     splitseed = random.randint(0, 1024)
-    
+
     X, X_val, y, y_val = train_test_split(features, labels, test_size=test_size, random_state=splitseed)
 
     le = LabelEncoder()
     y = torch.tensor(le.fit_transform(y)).long()
     y_val = torch.tensor(le.transform(y_val)).long()
-    
-    scaler = StandardScaler() 
+
+    scaler = StandardScaler()
     X = torch.tensor(scaler.fit_transform(X)).float()
     X_val  = torch.tensor(scaler.transform(X_val)).float()
     logging.info("Setting up model on {}".format(device))
@@ -305,12 +472,12 @@ def weight_variance():
         print(kind, "trained", np.var(train))
     data = pd.DataFrame(dict(w = np.concatenate(w), layer=np.array(layer), trained=np.array(trained)))
     #g = ggplot(data, aes(y='w', x='layer')) + geom_violin() + facet_wrap('~trained', nrow=2, scales="free_y")
-    g = ggplot(data, aes(y='w', x='layer')) + geom_point(position='jitter', alpha=0.1) + facet_wrap('~trained', nrow=2, scales="free_y") 
+    g = ggplot(data, aes(y='w', x='layer')) + geom_point(position='jitter', alpha=0.1) + facet_wrap('~trained', nrow=2, scales="free_y")
     ggsave(g, 'weight_variance.png')
 
-    
+
 def framewise_RSA_matrix(directory, layers, size=70000):
-    
+
     from sklearn.model_selection import train_test_split
     splitseed = random.randint(0, 1024)
     result = []
@@ -322,7 +489,7 @@ def framewise_RSA_matrix(directory, layers, size=70000):
             logging.info("Result for MFCC computed previously")
             result.append(dict(model=mode, layer='mfcc', cor=mfcc_cor[0]))
         else:
-            
+
             X, X_val, y, y_val = train_test_split(data['features'], data['labels'], test_size=size, random_state=splitseed)
             logging.info("Computing label identity matrix for {} datapoints".format(len(y_val)))
             y_val_sim = torch.tensor(y_val.reshape((-1, 1)) == y_val).float()
@@ -356,7 +523,7 @@ def framewise_RSA(directory='.', layers=[], size=70000):
             logging.info("Result for MFCC computed previously")
             result.append(dict(model=mode, layer='mfcc', cor=mfcc_cor[0]))
         else:
-            cor = correlation_score(data['features'], data['labels'], size=size) 
+            cor = correlation_score(data['features'], data['labels'], size=size)
             logging.info("Point biserial correlation for {}, mfcc: {}".format(mode, cor))
             result.append(dict(model=mode, layer='mfcc', cor=cor))
         for layer in layers:
@@ -371,14 +538,14 @@ def correlation_score(features, labels, size):
     from sklearn.metrics.pairwise import paired_cosine_distances
     from scipy.stats import pearsonr
     logging.info("Sampling 2x{} stimuli from a total of {}".format(size, len(labels)))
-    indices = np.array(random.sample(range(len(labels)), size*2)) 
-    y = labels[indices] 
-    x = features[indices] 
-    y_sim = y[: size] == y[size :] 
-    x_sim = 1 - paired_cosine_distances(x[: size], x[size :]) 
+    indices = np.array(random.sample(range(len(labels)), size*2))
+    y = labels[indices]
+    x = features[indices]
+    y_sim = y[: size] == y[size :]
+    x_sim = 1 - paired_cosine_distances(x[: size], x[size :])
     return pearsonr(x_sim, y_sim)[0]
 
-    
+
 def weighted_average_RSA(directory='.', layers=[], attention='linear', test_size=1/2,  attention_hidden_size=None, standardize=False, epochs=1, device='cpu'):
     from sklearn.model_selection import train_test_split
     torch.backends.cudnn.deterministic = True
@@ -390,7 +557,7 @@ def weighted_average_RSA(directory='.', layers=[], attention='linear', test_size
     trans = data['ipa']
     act = [ torch.tensor([item[:, :]]).float().to(device) for item in data['audio'] ]
 
-    trans, trans_val, act, act_val = train_test_split(trans, act, test_size=test_size, random_state=splitseed) 
+    trans, trans_val, act, act_val = train_test_split(trans, act, test_size=test_size, random_state=splitseed)
     if standardize:
         logging.info("Standardizing data")
         act, act_val = normalize(act, act_val)
@@ -414,12 +581,12 @@ def weighted_average_RSA(directory='.', layers=[], attention='linear', test_size
                 logging.info("Standardizing data")
                 act, act_val = normalize(act, act_val)
             this = train_wa(edit_sim, edit_sim_val, act, act_val, attention=attention, attention_hidden_size=None, epochs=epochs, device=device)
-            result.append({**this, 'model': mode, 'layer': layer}) 
+            result.append({**this, 'model': mode, 'layer': layer})
             del act, act_val
             logging.info("Maximum correlation on val: {} at epoch {}".format(result[-1]['cor'], result[-1]['epoch']))
     return result
 
-    
+
 def train_wa(edit_sim, edit_sim_val, stack, stack_val, attention='scalar', attention_hidden_size=None, epochs=1, device='cpu'):
     if attention == 'scalar':
         wa = platalea.attention.ScalarAttention(stack[0].size(2), hidden_size).to(device)
@@ -473,7 +640,7 @@ def weighted_average_RSA_partial(directory='.', layers=[], test_size=1/2,  stand
     image_map = { item['audio_id']: item['image'] for item in val }
     image = np.stack([ image_map[item] for item in data['audio_id'] ])
 
-    trans, trans_val, act, act_val, image, image_val = train_test_split(trans, act, image, test_size=test_size, random_state=splitseed) 
+    trans, trans_val, act, act_val, image, image_val = train_test_split(trans, act, image, test_size=test_size, random_state=splitseed)
     if standardize:
         logging.info("Standardizing data")
         act, act_val = normalize(act, act_val)
@@ -530,9 +697,9 @@ def weighted_average_RSA_partial(directory='.', layers=[], test_size=1/2,  stand
             e_full, e_base, e_mean = partial_r2(Edit, Act, Image, Edit_val, Act_val, Image_val)
             logging.info("Full, base, mean error: {} {}".format(e_full, e_base, e_mean))
             r2 =  (e_base - e_full)/e_base
-            this =  {'epoch': None, 'error': e_full, 'baseline': e_base, 'error_mean': e_mean, 'r2': r2  }            
+            this =  {'epoch': None, 'error': e_full, 'baseline': e_base, 'error_mean': e_mean, 'r2': r2  }
             pickle.dump(dict(Edit=Edit, Act=Act, Image=Image, Edit_val=Edit_val, Act_val=Act_val, Image_val=Image_val), open("fufi_{}_{}.pkl".format(mode, layer), "wb"), protocol=4)
-            result.append({**this, 'model': mode, 'layer': layer}) 
+            result.append({**this, 'model': mode, 'layer': layer})
             del act, act_val
             logging.info("Partial R2 on val: {} at epoch {}".format(result[-1]['r2'], result[-1]['epoch']))
     return result
@@ -570,7 +737,7 @@ def normalize(X, X_val):
     X_val_norm = [ (item - mu) /sigma for item in X_val ]
     return [x.to(device) for x in X_norm], [x.to(device) for x in X_val_norm ]
 
-    
+
 def weighted_average_diagnostic(directory='.', layers=[], attention='scalar', test_size=1/2, attention_hidden_size=None, hidden_size=None, standardize=False, epochs=1, factor=0.1, device='cpu'):
     from sklearn.model_selection import train_test_split
     from sklearn.feature_extraction.text import CountVectorizer
@@ -582,7 +749,7 @@ def weighted_average_diagnostic(directory='.', layers=[], attention='scalar', te
     data = pickle.load(open("{}/global_input.pkl".format(directory), "rb"))
     trans = data['ipa']
     act = [ torch.tensor(item[:, :]).float().to(device) for item in data['audio'] ]
-    
+
     trans, trans_val, X, X_val = train_test_split(trans, act, test_size=test_size, random_state=splitseed)
     if standardize:
         logging.info("Standardizing data")
@@ -613,7 +780,7 @@ def weighted_average_diagnostic(directory='.', layers=[], attention='scalar', te
             model = PooledClassifier(input_size=X[0].shape[1], output_size=y[0].shape[0],
                                      hidden_size=hidden_size, attention_hidden_size=attention_hidden_size, attention=attention).to(device)
             this = train_classifier(model, X, y, X_val, y_val, epochs=epochs, factor=factor)
-            result.append({**this, 'model': mode, 'layer': layer}) 
+            result.append({**this, 'model': mode, 'layer': layer})
             del X, X_val
             logging.info("Maximum accuracy on val: {} at epoch {}".format(result[-1]['acc'], result[-1]['epoch']))
     return result
@@ -636,10 +803,10 @@ class PooledClassifier(nn.Module):
             self.project = MLP(input_size, output_size, hidden_size=hidden_size)
         self.loss = nn.functional.binary_cross_entropy_with_logits
         self.weight_decay = weight_decay
-        
+
     def forward(self, x):
         return self.project(self.wa(x))
-    
+
     def predict(self, x):
         logit = self.project(self.wa(x))
         return (logit >= 0.0).float()
@@ -652,7 +819,7 @@ class SoftmaxClassifier(nn.Module):
         self.project = nn.Linear(in_features=input_size, out_features=output_size)
         self.loss = nn.functional.cross_entropy
         self.weight_decay = weight_decay
-        
+
     def forward(self, x):
         return self.project(x)
 
@@ -667,14 +834,14 @@ class MLP(nn.Module):
         self.h2o = nn.Linear(in_features=hidden_size, out_features=output_size)
         self.loss = nn.functional.cross_entropy
         self.weight_decay = weight_decay
-        
+
     def forward(self, x):
         return self.h2o(torch.relu(self.Dropout(self.i2h(x))))
 
     def predict(self, x):
         return self.forward(x).argmax(dim=1)
 
-    
+
 def collate(items):
     x, y = zip(*items)
     x = torch.nn.utils.rnn.pad_sequence(x, batch_first=True, padding_value=0)
@@ -685,7 +852,7 @@ def tuple_stack(xy):
     x, y = zip(*xy)
     return torch.stack(x), torch.stack(y)
 
-def rer(hi, lo): 
+def rer(hi, lo):
     return ((1-lo) - (1-hi))/(1-lo)
 
 def train_classifier(model, X, y, X_val, y_val, epochs=1, patience=50, factor=0.1, majority=majority_binary):
@@ -707,7 +874,7 @@ def train_classifier(model, X, y, X_val, y_val, epochs=1, patience=50, factor=0.
         for x, y in data:
             x = x.to(device)
             y = y.to(device)
-            y_pred = model(x) 
+            y_pred = model(x)
             loss = model.loss(y_pred, y)
             optim.zero_grad()
             loss.backward()
@@ -736,39 +903,40 @@ from plotnine import *
 from plotnine.options import figure_size
 
 def plot_rnn_vgs():
+    Path('fig/rnn-vgs').mkdir(parents=True, exist_ok=True)
     plot(path="data/out/rnn-vgs", output="fig/rnn-vgs")
-    
+
 def plot(path, output):
     ld = pd.read_json("{}/local/local_diagnostic.json".format(path), orient="records");         ld['scope'] = 'local';   ld['method'] = 'diagnostic'
-    lr = pd.read_json("{}/local/local_rsa.json".format(path), orient="records");                lr['scope'] = 'local';   lr['method'] = 'rsa'       
+    lr = pd.read_json("{}/local/local_rsa.json".format(path), orient="records");                lr['scope'] = 'local';   lr['method'] = 'rsa'
     gd = pd.read_json("{}/mean/global_diagnostic.json".format(path), orient="records");   gd['scope'] = 'mean pool';  gd['method'] = 'diagnostic'
-    gr = pd.read_json("{}/mean/global_rsa.json".format(path), orient="records");          gr['scope'] = 'mean pool';  gr['method'] = 'rsa'       
+    gr = pd.read_json("{}/mean/global_rsa.json".format(path), orient="records");          gr['scope'] = 'mean pool';  gr['method'] = 'rsa'
     ad = pd.read_json("{}/attn/global_diagnostic.json".format(path), orient="records");   ad['scope'] = 'attn pool';  ad['method'] = 'diagnostic'
-    ar = pd.read_json("{}/attn/global_rsa.json".format(path), orient="records");          ar['scope'] = 'attn pool';  ar['method'] = 'rsa'       
+    ar = pd.read_json("{}/attn/global_rsa.json".format(path), orient="records");          ar['scope'] = 'attn pool';  ar['method'] = 'rsa'
     data = pd.concat([ld, lr, gd, gr, ad, ar], sort=False)
 
     data['rer'] = rer(data['acc'], data['baseline'])
     data['score'] = data['rer'].fillna(0.0) + data['cor'].fillna(0.0)
 
-    order = list(data['layer'].unique()) 
+    order = list(data['layer'].unique())
     data['layer id'] = [ order.index(x) for x in data['layer'] ]
     # Reorder scope
     data['scope'] = pd.Categorical(data['scope'], categories=['local', 'mean pool', 'attn pool'])
     # Reorder model
     data['model'] = pd.Categorical(data['model'], categories=['trained', 'random'])
-    
+
     g = ggplot(data, aes(x='layer id', y='score', color='model', linetype='model', shape='model')) + geom_point() + geom_line() + \
                             facet_wrap('~ method + scope') + \
                             theme(figure_size=(figure_size[0]*1.5, figure_size[1]*1.5))
     ggsave(g, '{}/plot.png'.format(output))
 
-def rer(hi, lo): 
+def rer(hi, lo):
     return ((1-lo) - (1-hi))/(1-lo)
 
 def plot_r2_partial():
     path = 'data/out/rnn-vgs/mean/'
     data = pd.read_json("{}/global_rsa_partial.json".format(path), orient="records")
-    order = list(data['layer'].unique()) 
+    order = list(data['layer'].unique())
     data['layer id'] = [ order.index(x) for x in data['layer'] ]
     data['partial R²'] = (data['baseline'] - data['error']) / data['baseline']
     data['cor'] = abs(data['partial R²'])**0.5
@@ -776,19 +944,20 @@ def plot_r2_partial():
     data['model'] = pd.Categorical(data['model'], categories=['trained', 'random'])
     g = ggplot(data, aes(x='layer id', y='cor', color='model', linetype='model', shape='model')) + geom_point() + geom_line() +\
                             ylab("√R² (partial)")
+    Path('fig/rnn-vgs').mkdir(parents=True, exist_ok=True)
     ggsave(g, 'fig/rnn-vgs/r2_partial.png')
-    
+
 def partialing(path='.'):
     data = pd.read_json("{}/global_rsa_partial.json".format(path), orient="records")
-    order = list(data['layer'].unique()) 
+    order = list(data['layer'].unique())
     data['layer id'] = [ order.index(x) for x in data['layer'] ]
     data['partial R²'] = (data['baseline'] - data['error']) / data['baseline']
     # Reorder model
     data['model'] = pd.Categorical(data['model'], categories=['trained', 'random'])
     #
     pass
-                         
+
     ggsave(g, 'partialing.png')
-    
+
 #plot()
 #r2_partial()
