@@ -2,7 +2,7 @@ import torch
 import numpy as np
 import pickle
 import logging
-import platalea.asr as asr
+#import platalea.asr as asr
 import platalea.basic as basic
 import platalea.encoders as encoders
 import platalea.dataset as dataset
@@ -49,9 +49,9 @@ def prepare_rnn_asr():
             eos_id=fd.get_token_id(fd.eos),
             pad_id=fd.get_token_id(fd.pad)),
         inverse_transform_fn=fd.get_label_encoder().inverse_transform)
-    net_rand = asr.SpeechTranscriber(config).cuda()
+    #net_rand = asr.SpeechTranscriber(config).cuda()
     net_rand.eval()
-    net_train = asr.SpeechTranscriber(config)
+    #net_train = asr.SpeechTranscriber(config)
     net_train.load_state_dict(torch.load("models/rnn-asr/net.19.pt").state_dict())
     net_train.cuda()
     net_train.eval()
