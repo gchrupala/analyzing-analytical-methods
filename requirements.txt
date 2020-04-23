@@ -35,5 +35,4 @@ traitlets==4.3.2
 wcwidth==0.1.7
 python-Levenshtein==0.12.0
 git+https://github.com/gchrupala/ursa#egg=ursa
--e git+git@github.com:gchrupala/platalea@ac86f8bdafe3becd8dc7f326ce04efbc23f82e3d#egg=platalea
-
+-e git+git@github.com:gchrupala/platalea@9b81404760204231793ced1ad4fa38d650a60e9c#egg=platalea
