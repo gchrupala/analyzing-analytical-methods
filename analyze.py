@@ -84,7 +84,13 @@ def analyze_rnn_vgs():
                   device='cpu'
                   )
     global_rsa(config)
-    del config['attention']
+    config = dict(directory='data/out/rnn-vgs/',
+                  output=output_dir,
+                  epochs=60,
+                  test_size=1/2,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  device='cpu'
+                  )
     global_rsa_partial(config)
 
 
@@ -636,7 +642,11 @@ def weighted_average_RSA_partial(directory='.', layers=[], test_size=1/2,  stand
     data = pickle.load(open("{}/global_input.pkl".format(directory), "rb"))
     trans = data['ipa']
     act = [ torch.tensor([item[:, :]]).float().to(device) for item in data['audio'] ]
-    val = Flickr8KData(root='/roaming/gchrupal/datasets/flickr8k/', split='val')
+    val = Flickr8KData(root='data/datasets/flickr8k/', split='val',
+                               feature_fname='mfcc_features.pt' )
+    # Vocabulary should be initialized even if we are not going to use text data
+    if Flickr8KData.le is None:
+        Flickr8KData.init_vocabulary(val)
     image_map = { item['audio_id']: item['image'] for item in val }
     image = np.stack([ image_map[item] for item in data['audio_id'] ])
 
