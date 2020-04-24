@@ -4,10 +4,10 @@ import pickle
 import logging
 #import platalea.asr as asr
 import platalea.basic as basic
-import platalea.encoders as encoders
 import platalea.dataset as dataset
 import json
 import os
+
 
 def prepare_rnn_vgs():
     logging.getLogger().setLevel('INFO')
@@ -26,24 +26,27 @@ def prepare_rnn_vgs():
 def prepare_rnn_asr():
     logging.getLogger().setLevel('INFO')
     logging.info("Loading pytorch models")
+    conf = pickle.load(open('models/rnn-asr/config.pkl', 'rb'))
+    fd = dataset.Flickr8KData
+    fd.le = conf['label_encoder']
     config = dict(
         SpeechEncoder=dict(
             conv=dict(in_channels=39, out_channels=64, kernel_size=6, stride=2,
                       padding=0, bias=False),
-            rnn=dict(input_size=64, hidden_size=hidden_size, num_layers=4,
-                     bidirectional=False, dropout=dropout),
-            rnn_layer_type=nn.GRU),
+            rnn=dict(input_size=64, hidden_size=1024, num_layers=4,
+                     bidirectional=False, dropout=0.0),
+            rnn_layer_type=torch.nn.GRU),
         TextDecoder=dict(
             emb=dict(num_embeddings=fd.vocabulary_size(),
-                     embedding_dim=hidden_size),
-            drop=dict(p=dropout),
-            att=dict(in_size_enc=hidden_size, in_size_state=hidden_size,
-                     hidden_size=hidden_size),
-            rnn=dict(input_size=hidden_size * 2, hidden_size=hidden_size,
-                     num_layers=1, dropout=dropout),
-            out=dict(in_features=hidden_size * 2,
+                     embedding_dim=1024),
+            drop=dict(p=0.0),
+            att=dict(in_size_enc=1024, in_size_state=1024,
+                     hidden_size=1024),
+            rnn=dict(input_size=1024 * 2, hidden_size=1024,
+                     num_layers=1, dropout=0.0),
+            out=dict(in_features=1024 * 2,
                      out_features=fd.vocabulary_size()),
-            rnn_layer_type=nn.GRU,
+            rnn_layer_type=torch.nn.GRU,
             max_output_length=400,  # max length for flickr annotations is 199
             sos_id=fd.get_token_id(fd.sos),
             eos_id=fd.get_token_id(fd.eos),
@@ -64,7 +67,7 @@ def prepare_transformer_asr():
     logging.getLogger().setLevel('INFO')
     ds_fpath = "data/activations/transformer-asr/downsampling_factors.pkl"
     factors = pickle.load(open(ds_fpath, "rb"))
-    layers = factors.keys()
+    #layers = factors.keys()
     logging.info("Loading input")
     global_input_in_fpath = "data/activations/transformer-asr/global_input.pkl"
     data = pickle.load(open(global_input_in_fpath, "rb"))
@@ -72,7 +75,7 @@ def prepare_transformer_asr():
     #data['audio_id'] = np.array([ i + '.wav' for i in data['audio_id']])
     logging.info("Adding IPA")
     alignment = load_alignment("data/datasets/flickr8k/fa.json")
-    data['ipa'] = np.array([ align2ipa(alignment[i]) for i in data['audio_id'] ])
+    data['ipa'] = np.array([align2ipa(alignment[i]) for i in data['audio_id']])
     logging.info("Saving input")
     global_input_out_fpath = "data/out/transformer-asr/global_input.pkl"
     pickle.dump(data, open(global_input_out_fpath, "wb"), protocol=4)
@@ -104,7 +107,11 @@ def save_global_data(nets, directory='.', batch_size=32):
     logging.info("Loading alignments")
     data = load_alignment("data/datasets/flickr8k/fa.json")
     logging.info("Loading audio features")
-    val = dataset.Flickr8KData(root='data/datasets/flickr8k/', split='val')
+    val = dataset.Flickr8KData(root='data/datasets/flickr8k/', split='val',
+                               feature_fname='mfcc_features.pt' )
+    # Vocabulary should be initialized even if we are not going to use text data
+    if dataset.Flickr8KData.le is None:
+        dataset.Flickr8KData.init_vocabulary(val)
     #
     alignments = [ data[sent['audio_id']] for sent in val ]
     # Only consider cases where alignement does not fail
@@ -245,7 +252,7 @@ def phoneme_activations(activations, alignments, index=lambda ms: ms//10, framew
 
 def align2ipa(datum):
     """Extract IPA transcription from alignment information for a sentence."""
-    from platalea.analysis.ipa import arpa2ipa
+    from ipa import arpa2ipa
     result = []
     for word in datum['words']:
         for phoneme in word['phones']:
