@@ -130,9 +130,9 @@ def local_diagnostic(config):
     del config['output']
     runs = range(1, config['runs']+1)
     del config['runs']
+    output = []
     for run in runs:
         logging.info("Starting run {}".format(run))
-        output = []
         data_mfcc = pickle.load(open('{}/local_input.pkl'.format(directory), 'rb'))
         for mode in ['random', 'trained']:
             logging.info("Fitting local classifier for mfcc")
@@ -140,6 +140,7 @@ def local_diagnostic(config):
             logging.info("Result for {}, {} = {}".format(mode, 'mfcc', result['acc']))
             result['model'] = mode
             result['layer'] = 'mfcc'
+            result['run'] = run
             output.append(result)
             for layer in config['layers']:
                 data = pickle.load(open('{}/local_{}_{}.pkl'.format(directory, mode, layer), 'rb'))
@@ -786,8 +787,10 @@ def plot(path, output):
     data['scope'] = pd.Categorical(data['scope'], categories=['local', 'mean pool', 'attn pool'])
     # Reorder model
     data['model'] = pd.Categorical(data['model'], categories=['trained', 'random'])
-    
-    g = ggplot(data, aes(x='layer id', y='score', color='model', linetype='model', shape='model')) + geom_point() + geom_line() + \
+    # Make variable to group model x run interaction for plotting multiple runs.
+    data['modelxrun'] = data.apply(lambda x: "{} {}".format(x['model'], x['run']), axis=1) 
+    # g = ggplot(data, aes(x='layer id', y='score', color='model', linetype='model', shape='model')) + geom_point() + geom_line() + \
+    g = ggplot(data, aes(x='layer id', y='score', color='model', linetype='model', shape='model')) + geom_point() +  geom_line(aes(group='modelxrun')) + \
                             facet_wrap('~ method + scope') + \
                             theme(figure_size=(figure_size[0]*1.5, figure_size[1]*1.5))
     ggsave(g, '{}/plot.png'.format(output))
