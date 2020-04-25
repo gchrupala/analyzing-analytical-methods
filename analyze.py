@@ -5,6 +5,8 @@ import random
 random.seed(SEED)
 import numpy as np
 np.random.seed(SEED)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
 
 import sys
 import torch.nn as nn
@@ -36,72 +38,86 @@ def analyze_rnn_vgs():
                   epochs=500,
                   test_size = 1/2,
                   layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
-                  device='cuda'
+                  device='cuda',
+                  runs=3,
                   )
-#    global_diagnostic(config)
+    global_diagnostic(config)
 
 
     logging.info("Attention pooling; global RSA")
     config = dict(directory = 'data/out/rnn-vgs/',
                   output = 'data/out/rnn-vgs/attn/',
-              attention = 'linear',
-              standardize = True,
-              attention_hidden_size = None,
-              epochs = 60,
-              test_size = 1/2,
-              layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
-              device = 'cuda'
+                  attention = 'linear',
+                  standardize = True,
+                  attention_hidden_size = None,
+                  epochs = 60,
+                  test_size = 1/2,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  device = 'cuda',
+                  runs=3,
               )
-#    global_rsa(config)
+    global_rsa(config)
  
     
     logging.info("Mean pooling; global diagnostic")
     config = dict(directory = 'data/out/rnn-vgs/',
                   output = 'data/out/rnn-vgs/mean/',
-              attention = 'mean',
-              hidden_size = None,
-              attention_hidden_size = None,
-              epochs=500,
-              test_size = 1/2,
-              layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
-              device='cuda'
+                  attention = 'mean',
+                  hidden_size = None,
+                  attention_hidden_size = None,
+                  epochs=500,
+                  test_size = 1/2,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  device='cuda',
+                  runs=3
               )
-#    global_diagnostic(config)
+    global_diagnostic(config)
 
 
     logging.info("Mean pooling; global RSA")
     config = dict(directory = 'data/out/rnn-vgs/',
                   output = 'data/out/rnn-vgs/mean/',
-              attention = 'mean',
-              epochs = 60,
-              test_size = 1/2,
-              layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
-              device = 'cpu'
+                  attention = 'mean',
+                  epochs = 60,
+                  test_size = 1/2,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  device = 'cpu',
+                  runs=1,
               )
-#    global_rsa(config)
-    del config['attention']
+    global_rsa(config)
+    logging.info("Mean pooling; global RSA (partial)")
+    config = dict(directory = 'data/out/rnn-vgs/',
+                  output = 'data/out/rnn-vgs/mean/',
+                  epochs = 60,
+                  test_size = 1/2,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  device = 'cpu',
+                  runs=1,
+              )
     global_rsa_partial(config)
     
     logging.info("Local diagnostic")
     config = dict(directory = 'data/out/rnn-vgs/',
                   output= 'data/out/rnn-vgs/local/',
-              hidden=None,
-              epochs=40,
-              layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ]
+                  hidden=None,
+                  epochs=40,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  runs=3
               )
 
-#    local_diagnostic(config)
+    local_diagnostic(config)
 
 
     logging.info("Local RSA")
     config = dict(directory = 'data/out/rnn-vgs/',
                   output='data/out/rnn-vgs/local/',
-              size = 793964 // 2,
-              layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
-              matrix=False
+                  size = 793964 // 2,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  matrix=False,
+                  runs=1
               )
 
-#    local_rsa(config)
+    local_rsa(config)
 
 
     
@@ -112,10 +128,13 @@ def local_diagnostic(config):
     directory = config['directory']
     out = config["output"] + "local_diagnostic.json"
     del config['output']
-    output = []
-    data_mfcc = pickle.load(open('{}/local_input.pkl'.format(directory), 'rb'))
-    #for mode in ['trained', 'random']:
-    for mode in ['random', 'trained']:
+    runs = range(1, config['runs']+1)
+    del config['runs']
+    for run in runs:
+        logging.info("Starting run {}".format(run))
+        output = []
+        data_mfcc = pickle.load(open('{}/local_input.pkl'.format(directory), 'rb'))
+        for mode in ['random', 'trained']:
             logging.info("Fitting local classifier for mfcc")
             result  = local_classifier(data_mfcc['features'], data_mfcc['labels'], epochs=config['epochs'], device='cuda:0', hidden=config['hidden'])
             logging.info("Result for {}, {} = {}".format(mode, 'mfcc', result['acc']))
@@ -129,6 +148,7 @@ def local_diagnostic(config):
                 logging.info("Result for {}, {} = {}".format(mode, layer, result['acc']))
                 result['model'] = mode
                 result['layer'] = layer
+                result['run'] = run
                 output.append(result)
     logging.info("Writing {}".format(out))            
     json.dump(output, open(out, "w"), indent=True)
@@ -136,6 +156,7 @@ def local_diagnostic(config):
 def local_rsa(config):
     out = config['output'] + "local_rsa.json"
     del config['output']
+    del config['runs']
     if config['matrix']:
         raise NotImplementedError
         #result = framewise_RSA_matrix(directory, layers=config['layers'], size=config['size'])
@@ -150,21 +171,30 @@ def local_rsa(config):
 def global_rsa(config):
     out = config['output'] + 'global_rsa.json'
     del config['output']
-    result = weighted_average_RSA(**config)
+    result = []
+    runs = range(1, config['runs']+1)
+    del config['runs']
+    for run in runs:
+        result += inject(weighted_average_RSA(**config), {'run': run})
     logging.info("Writing {}".format(out))
     json.dump(result, open(out, 'w'), indent=2)
 
 def global_rsa_partial(config):
     out = config['output'] + 'global_rsa_partial.json'
     del config['output']
+    del config['runs']
     result = weighted_average_RSA_partial(**config)
     json.dump(result, open(out, 'w'), indent=2)
 
 def global_diagnostic(config):
     out = config['output'] + 'global_diagnostic.json'
     del config['output']
-    logging.getLogger().setLevel('INFO')
-    result = weighted_average_diagnostic(**config)
+    result = []
+    runs = range(1, config['runs']+1)
+    del config['runs']
+    for run in runs:
+        logging.info("Starting run {}".format(run))
+        result += inject(weighted_average_diagnostic(**config), {'run':run})
     logging.info("Writing {}".format(out))
     json.dump(result, open(out, 'w') , indent=2)
 
@@ -790,5 +820,7 @@ def partialing(path='.'):
                          
     ggsave(g, 'partialing.png')
     
-#plot()
-#r2_partial()
+
+def inject(x, e):
+    return [ {**xi, **e} for xi in x ]
+        

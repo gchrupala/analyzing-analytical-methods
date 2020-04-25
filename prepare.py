@@ -1,5 +1,13 @@
+SEED=666
 import torch
+torch.manual_seed(SEED)
+import random
+random.seed(SEED)
 import numpy as np
+np.random.seed(SEED)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+
 import pickle
 import logging
 import platalea.basic as basic
