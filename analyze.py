@@ -14,6 +14,7 @@ import platalea.basic as basic
 import platalea.encoders as encoders
 import platalea.attention
 import os.path
+from pathlib import Path
 import logging
 logging.getLogger().setLevel('INFO')
 import json
@@ -28,9 +29,11 @@ import pickle
 
 def analyze_rnn_vgs():
     logging.info("Attention pooling; global diagnostic")
-    
+    Path('data/out/rnn-vgs/attn/').mkdir(parents=True, exist_ok=True)
+    Path('data/out/rnn-vgs/mean/').mkdir(parents=True, exist_ok=True)
+    Path('data/out/rnn-vgs/local/').mkdir(parents=True, exist_ok=True)
     config = dict(directory = 'data/out/rnn-vgs/',
-                  output = 'data/out/rnn-vgs/attn/',
+                  output='data/out/rnn-vgs/attn/',
                   attention = 'linear',
                   standardize = True,
                   hidden_size = None,
@@ -119,6 +122,177 @@ def analyze_rnn_vgs():
 
     local_rsa(config)
 
+
+
+def analyze_rnn_asr():
+    logging.info("Attention pooling; global diagnostic")
+
+    config = dict(directory='data/out/rnn-asr/',
+                  output='data/out/rnn-asr/attn/',
+                  attention='linear',
+                  standardize=True,
+                  hidden_size=None,
+                  attention_hidden_size=None,
+                  epochs=500,
+                  test_size=1/2,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  device='cuda',
+                  runs=3
+                  )
+    global_diagnostic(config)
+
+
+    logging.info("Attention pooling; global RSA")
+    config = dict(directory='data/out/rnn-asr/',
+                  output='data/out/rnn-asr/attn/',
+                  attention='linear',
+                  standardize=True,
+                  attention_hidden_size=None,
+                  epochs=60,
+                  test_size=1/2,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  device='cuda',
+                  runs=3
+                  )
+    global_rsa(config)
+
+
+    logging.info("Mean pooling; global diagnostic")
+    config = dict(directory='data/out/rnn-asr/',
+                  output='data/out/rnn-asr/mean/',
+                  attention='mean',
+                  hidden_size=None,
+                  attention_hidden_size=None,
+                  epochs=500,
+                  test_size=1/2,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  device='cuda',
+                  runs=3
+                  )
+    global_diagnostic(config)
+
+
+    logging.info("Mean pooling; global RSA")
+    config = dict(directory='data/out/rnn-asr/',
+                  output='data/out/rnn-asr/mean/',
+                  attention='mean',
+                  epochs=60,
+                  test_size=1/2,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  device='cpu',
+                  runs=1
+                  )
+    global_rsa(config)
+
+
+    logging.info("Local diagnostic")
+    config = dict(directory='data/out/rnn-asr/',
+                  output='data/out/rnn-asr/local/',
+                  hidden=None,
+                  epochs=40,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  runs=3
+                  
+                  )
+    local_diagnostic(config)
+
+
+    logging.info("Local RSA")
+    config = dict(directory='data/out/rnn-asr/',
+                  output='data/out/rnn-asr/local/',
+                  size=793964 // 2,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  matrix=False,
+                  runs=1
+                  )
+    local_rsa(config)
+
+
+def analyze_transformer_asr():
+    # TODO adapt layers
+    logging.info("Attention pooling; global diagnostic")
+
+    config = dict(directory = 'data/out/transformer-asr/',
+                  output = 'data/out/transformer-asr/attn/',
+                  attention = 'linear',
+                  standardize = True,
+                  hidden_size = None,
+                  attention_hidden_size = None,
+                  epochs=500,
+                  test_size = 1/2,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  device='cuda',
+                  runs=3
+                  )
+    global_diagnostic(config)
+
+
+    logging.info("Attention pooling; global RSA")
+    config = dict(directory = 'data/out/transformer-asr/',
+                  output = 'data/out/transformer-asr/attn/',
+                  attention = 'linear',
+                  standardize = True,
+                  attention_hidden_size = None,
+                  epochs = 60,
+                  test_size = 1/2,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  device = 'cuda',
+                  runs=3
+              )
+    global_rsa(config)
+
+
+    logging.info("Mean pooling; global diagnostic")
+    config = dict(directory = 'data/out/transformer-asr/',
+                  output = 'data/out/transformer-asr/mean/',
+                  attention = 'mean',
+                  hidden_size = None,
+                  attention_hidden_size = None,
+                  epochs=500,
+                  test_size = 1/2,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  device='cuda',
+                  runs=3
+              )
+    global_diagnostic(config)
+
+
+    logging.info("Mean pooling; global RSA")
+    config = dict(directory = 'data/out/transformer-asr/',
+                  output = 'data/out/transformer-asr/mean/',
+                  attention = 'mean',
+                  epochs = 60,
+                  test_size = 1/2,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  device = 'cpu',
+                  runs=1
+              )
+    global_rsa(config)
+
+    logging.info("Local diagnostic")
+    config = dict(directory = 'data/out/transformer-asr/',
+                  output= 'data/out/transformer-asr/local/',
+                  hidden=None,
+                  epochs=40,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  runs=3
+                  
+              )
+
+    local_diagnostic(config)
+
+
+    logging.info("Local RSA")
+    config = dict(directory = 'data/out/transformer-asr/',
+                  output='data/out/transformer-asr/local/',
+                  size = 793964 // 2,
+                  layers=['conv'] + [ 'rnn{}'.format(i) for i in range(4) ],
+                  matrix=False,
+                  runs=1
+              )
+
+    local_rsa(config)
+    
 
     
 ## Models            
@@ -767,11 +941,12 @@ from plotnine import *
 from plotnine.options import figure_size
 
 def plot_rnn_vgs():
+    Path('fig/rnn-vgs').mkdir(parents=True, exist_ok=True)
     plot(path="data/out/rnn-vgs", output="fig/rnn-vgs")
     
 def plot(path, output):
-    ld = pd.read_json("{}/local/local_diagnostic.json".format(path), orient="records");         ld['scope'] = 'local';   ld['method'] = 'diagnostic'
-    lr = pd.read_json("{}/local/local_rsa.json".format(path), orient="records");                lr['scope'] = 'local';   lr['method'] = 'rsa'       
+    ld = pd.read_json("{}/local/local_diagnostic.json".format(path), orient="records");   ld['scope'] = 'local';      ld['method'] = 'diagnostic'
+    lr = pd.read_json("{}/local/local_rsa.json".format(path), orient="records");          lr['scope'] = 'local';      lr['method'] = 'rsa'       
     gd = pd.read_json("{}/mean/global_diagnostic.json".format(path), orient="records");   gd['scope'] = 'mean pool';  gd['method'] = 'diagnostic'
     gr = pd.read_json("{}/mean/global_rsa.json".format(path), orient="records");          gr['scope'] = 'mean pool';  gr['method'] = 'rsa'       
     ad = pd.read_json("{}/attn/global_diagnostic.json".format(path), orient="records");   ad['scope'] = 'attn pool';  ad['method'] = 'diagnostic'

@@ -3,6 +3,7 @@
 This repository contains the instructions and code to help you reproduce the results in the following paper:
 
 Grzegorz Chrupała, Bertrand Higy and Afra Alishahi (2020). Analyzing analytical methods: The case of phonology in neural models of spoken language. In Proceedings of the 58th Annual Meeting of the Association for Computational Linguistics.
+https://arxiv.org/abs/2004.07070
 
 ## RNN-VGS experiments
 
@@ -33,7 +34,7 @@ python -c 'import analyze; analyze.plot_r2_partial()'
 python -c 'import analyze; analyze.plot_pooled_feature_std()
 ```
 
-## ASR-VGS experiments
+## RNN-ASR experiments
 [TODO]
 
 ## Transformer-ASR experiments
