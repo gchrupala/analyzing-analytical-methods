@@ -10,11 +10,12 @@ torch.backends.cudnn.benchmark = False
 
 import pickle
 import logging
-#import platalea.asr as asr
+import platalea.asr as asr
 import platalea.basic as basic
 import platalea.dataset as dataset
 import json
 import os
+from pathlib import Path
 
 
 def prepare_rnn_vgs():
@@ -60,10 +61,10 @@ def prepare_rnn_asr():
             eos_id=fd.get_token_id(fd.eos),
             pad_id=fd.get_token_id(fd.pad)),
         inverse_transform_fn=fd.get_label_encoder().inverse_transform)
-    #net_rand = asr.SpeechTranscriber(config).cuda()
+    net_rand = asr.SpeechTranscriber(config).cuda()
     net_rand.eval()
-    #net_train = asr.SpeechTranscriber(config)
-    net_train.load_state_dict(torch.load("models/rnn-asr/net.19.pt").state_dict())
+    net_train = asr.SpeechTranscriber(config)
+    net_train.load_state_dict(torch.load("models/rnn-asr/net.13.pt"))
     net_train.cuda()
     net_train.eval()
     nets = [('trained', net_train), ('random', net_rand)]
@@ -82,7 +83,7 @@ def prepare_transformer_asr():
     #logging.info("Fixing IDs")
     #data['audio_id'] = np.array([ i + '.wav' for i in data['audio_id']])
     logging.info("Adding IPA")
-    alignment = load_alignment("data/datasets/flickr8k/fa.json")
+    alignment = load_alignment("data/datasets/librispeech/fa.json")
     data['ipa'] = np.array([align2ipa(alignment[i]) for i in data['audio_id']])
     logging.info("Saving input")
     global_input_out_fpath = "data/out/transformer-asr/global_input.pkl"
@@ -107,6 +108,7 @@ def vgs_factors():
 
 
 def save_data(nets, directory, batch_size=32):
+    Path(directory).mkdir(parents=True, exist_ok=True)
     save_global_data(nets, directory=directory, batch_size=batch_size) # FIXME adapt this per directory too
     save_local_data(directory=directory)
 
@@ -134,7 +136,8 @@ def save_global_data(nets, directory='.', batch_size=32):
                        ipa =      np.array([align2ipa(datum)  for datum in alignments]),
                        text =     np.array([datum['transcript'] for datum in alignments]),
                        audio = np.array(audio_np))
-    pickle.dump(global_input, open("data/out/rnn-vgs/global_input.pkl", "wb"), protocol=4)
+    global_input_path = Path(directory) / 'global_input.pkl'
+    pickle.dump(global_input, open(global_input_path, "wb"), protocol=4)
 
     for mode, net in nets:
         global_act = collect_activations(net, audio, batch_size=batch_size)
