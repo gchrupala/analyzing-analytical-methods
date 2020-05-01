@@ -24,7 +24,7 @@ import pickle
 
 def analyze_rnn_vgs():
     layers = ['conv'] + ['rnn{}'.format(i) for i in range(4)]
-    analyze('data/out/rnn-vgs', layers)
+    analyze('data/out/rnn-vgs', layers, 793964)
 
     logging.info("Mean pooling; global RSA partial")
     config = dict(directory=' data/out/rnn-vgs',
@@ -40,10 +40,10 @@ def analyze_rnn_vgs():
 
 def analyze_rnn_asr():
     layers = ['conv'] + ['rnn{}'.format(i) for i in range(4)]
-    analyze('data/out/rnn-asr', layers)
+    analyze('data/out/rnn-asr', layers, 793964)
 
 
-def analyze(output_root_dir, layers):
+def analyze(output_root_dir, layers, nb_samples):
     output_dir = Path(output_root_dir) / 'attn'
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -118,7 +118,7 @@ def analyze(output_root_dir, layers):
     logging.info("Local RSA")
     config = dict(directory=output_root_dir,
                   output=output_dir,
-                  size=793964 // 2,
+                  size=nb_samples // 2,
                   layers=layers,
                   matrix=False,
                   runs=1)
@@ -127,7 +127,7 @@ def analyze(output_root_dir, layers):
 
 def analyze_transformer_asr():
     layers = ['convout'] + ['transf{}'.format(i) for i in range(12)]
-    analyze('data/out/transformer-asr', layers)
+    analyze('data/out/transformer-asr', layers, 485195)
 
 
 ## Models
