@@ -24,7 +24,7 @@ import pickle
 
 def analyze_rnn_vgs():
     layers = ['conv'] + ['rnn{}'.format(i) for i in range(4)]
-    #analyze('data/out/rnn-vgs', layers)
+    analyze('data/out/rnn-vgs', layers)
 
     logging.info("Mean pooling; global RSA partial")
     config = dict(directory=' data/out/rnn-vgs',
@@ -59,7 +59,7 @@ def analyze(output_root_dir, layers):
                   layers=layers,
                   device='cuda',
                   runs=3)
-    #global_diagnostic(config)
+    global_diagnostic(config)
 
     logging.info("Attention pooling; global RSA")
     config = dict(directory=output_root_dir,
@@ -72,7 +72,7 @@ def analyze(output_root_dir, layers):
                   layers=layers,
                   device='cuda',
                   runs=3)
-    #global_rsa(config)
+    global_rsa(config)
 
 
     output_dir = Path(output_root_dir) / 'mean'
@@ -89,7 +89,7 @@ def analyze(output_root_dir, layers):
                   layers=layers,
                   device='cuda',
                   runs=3)
-    #global_diagnostic(config)
+    global_diagnostic(config)
 
     logging.info("Mean pooling; global RSA")
     config = dict(directory=output_root_dir,
@@ -304,6 +304,10 @@ def local_classifier(features, labels, test_size=1/2, epochs=1, device='cpu', hi
     """Fit classifier on part of features and labels and return accuracy on the other part."""
     from sklearn.preprocessing import StandardScaler, LabelEncoder
     from sklearn.model_selection import train_test_split
+    # remove sil
+    sil = labels != 'sil'
+    features = features[sil]
+    labels   = labels[sil]
 
     splitseed = random.randint(0, 1024)
 
