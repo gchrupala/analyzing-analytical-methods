@@ -76,27 +76,19 @@ def prepare_transformer_asr():
     logging.getLogger().setLevel('INFO')
     ds_fpath = "data/activations/transformer-asr/downsampling_factors.pkl"
     factors = pickle.load(open(ds_fpath, "rb"))
-    #layers = factors.keys()
     logging.info("Loading input")
     global_input_in_fpath = "data/activations/transformer-asr/global_input.pkl"
     data = pickle.load(open(global_input_in_fpath, "rb"))
-    #logging.info("Fixing IDs")
-    #data['audio_id'] = np.array([ i + '.wav' for i in data['audio_id']])
     logging.info("Adding IPA")
     alignment = load_alignment("data/datasets/librispeech/fa.json")
     data['ipa'] = np.array([align2ipa(alignment[i]) for i in data['audio_id']])
     logging.info("Saving input")
     global_input_out_fpath = "data/out/transformer-asr/global_input.pkl"
     pickle.dump(data, open(global_input_out_fpath, "wb"), protocol=4)
-    #for mode in ['trained', 'random']:
-    #    for layer in layers:
-    #        logging.info("Loading data for {} {}".format(mode, layer))
-    #        fname = "global_{}.{}.pkl".format(mode, layer)
-    #        fpath = "data/{}/transormer-asr/" + fname
-    #        data = pickle.load(open(fpath.format('activations'), "rb"))
-    #        data = {layer: data}
-    #        logging.info("Saving data for {} {}".format(mode, layer))
-    #        pickle.dump(data, open(fpath.format('out'), "wb"), protocol=4)
+    filter_global_data(directory='data/out/transformer-asr',
+                       alignment_fpath="data/datasets/librispeech/fa.json")
+    save_local_data(directory='data/out/transformer-asr',
+                    alignment_fpath="data/datasets/librispeech/fa.json")
 
 
 def vgs_factors():
@@ -110,7 +102,8 @@ def vgs_factors():
 def save_data(nets, directory, batch_size=32):
     Path(directory).mkdir(parents=True, exist_ok=True)
     save_global_data(nets, directory=directory, batch_size=batch_size) # FIXME adapt this per directory too
-    save_local_data(directory=directory)
+    save_local_data(directory=directory,
+                    alignment_fpath='data/datasets/flickr8k/fa.json')
 
 def save_global_data(nets, directory='.', batch_size=32):
     """Generate data for training a phoneme decoding model."""
@@ -145,40 +138,33 @@ def save_global_data(nets, directory='.', batch_size=32):
             logging.info("Saving global data in {}/global_{}_{}.pkl".format(directory, mode, layer))
             pickle.dump({layer: global_act[layer]}, open("{}/global_{}_{}.pkl".format(directory, mode, layer), "wb"), protocol=4)
 
-def filter_global_data(directory):
+def filter_global_data(directory, alignment_fpath):
     """Remove sentences with OOV items from data."""
     logging.getLogger().setLevel('INFO')
-    logging.info("Loading raw data")
-    global_input =  pickle.load(open("{}/global_input_raw.pkl".format(directory), "rb"))
-    logging.info("Loading alignments")
-    adata = load_alignment("data/datasets/flickr8k/fa.json".format(directory))
+    logging.info("Loading original data")
+    global_input =  pickle.load(open("{}/global_input.pkl".format(directory), "rb"))
+    adata = load_alignment(alignment_fpath)
 
     logging.info("Filtering out failed alignments and OOV")
-    alignments = [ adata.get(i, adata.get(i+'.wav')) for i in global_input['audio_id'] ]
+    alignments = [adata.get(i, adata.get(i+'.wav')) for i in global_input['audio_id']]
     # Only consider cases where alignement does not fail
     # Only consider cases with no OOV items
-    alignments = [item for item in alignments if good_alignment(item) ]
+    alignments = [item for item in alignments if good_alignment(item)]
     sentids = set(item['audio_id'] for item in alignments)
     ## Global data
-
-    include = np.array([ i in sentids for i in global_input['audio_id'] ])
-
-    #filtered = { key: np.array(value)[include] for key, value in global_input.items() }
-    # Hack to fix broken format
-    filtered = {}
-    for key, value in global_input.items():
-        if key == "audio":
-            value = [ v.numpy() for v in value ]
-        filtered[key] = np.array(value)[include]
+    include = np.array([i in sentids for i in global_input['audio_id']])
+    filtered = { key: np.array(value)[include] for key, value in global_input.items() }
 
     logging.info("Saving filtered data")
     pickle.dump(filtered, open("{}/global_input.pkl".format(directory), "wb"), protocol=4)
 
     for name in ['trained', 'random']:
-        global_act = pickle.load(open("{}/global_{}_raw.pkl".format(directory, name), "rb"))
-        filtered = { key: np.array(value)[include] for key, value in global_act.items() }
-        logging.info("Saving filtered global data in global_{}.pkl".format(name))
-        pickle.dump(filtered, open("{}/global_{}.pkl".format(directory, name), "wb"), protocol=4)
+        pattern = "global_{}_*.pkl".format(name)
+        for fname in Path(directory).glob(pattern):
+            global_act = pickle.load(open(fname, "rb"))
+            filtered = { key: np.array(value)[include] for key, value in global_act.items() }
+            logging.info("Saving filtered global data in {}".format(fname))
+            pickle.dump(filtered, open(fname, "wb"), protocol=4)
 
 def good_alignment(item):
     for word in item['words']:
@@ -204,11 +190,11 @@ def make_indexer(factors, layer):
          return t
      return index
 
-def save_local_data(directory):
+def save_local_data(directory, alignment_fpath):
     logging.getLogger().setLevel('INFO')
     logging.info("Loading alignments")
     global_input =  pickle.load(open("{}/global_input.pkl".format(directory), "rb"))
-    adata = load_alignment("data/datasets/flickr8k/fa.json".format(directory))
+    adata = load_alignment(alignment_fpath)
     alignments = [ adata.get(i, adata.get(i+'.wav')) for i in global_input['audio_id'] ]
     ## Local data
     local_data = {}
@@ -223,7 +209,7 @@ def save_local_data(directory):
         factors = vgs_factors()
     for mode in ['trained', 'random']:
         for layer in factors.keys():
-            if layer == "conv1":
+            if layer == "conv1" or layer == "conv2":
                 pass # This data is too big
             else:
                 global_act = pickle.load(open("{}/global_{}_{}.pkl".format(directory, mode, layer), "rb"))
