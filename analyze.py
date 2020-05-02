@@ -127,7 +127,7 @@ def analyze(output_root_dir, layers, nb_samples):
 
 def analyze_transformer_asr():
     layers = ['convout'] + ['transf{}'.format(i) for i in range(12)]
-    analyze('data/out/transformer-asr', layers, 485195)
+    analyze('data/out/trans-asr', layers, 485195)
 
 
 ## Models
@@ -791,8 +791,8 @@ def plot_rnn_asr():
 
 
 def plot_transformer_asr():
-    Path('fig/transformer-asr').mkdir(parents=True, exist_ok=True)
-    plot(path="data/out/transformer-asr", output="fig/transformer-asr")
+    Path('fig/trans-asr').mkdir(parents=True, exist_ok=True)
+    plot(path="data/out/trans-asr", output="fig/trans-asr")
 
 
 def plot(path, output):
